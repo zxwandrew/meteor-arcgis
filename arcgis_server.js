@@ -1,22 +1,33 @@
 var OAuth = Package.oauth.OAuth;
 
+
+Arcgis.whitelistedFields = ["username", "email"];
+
+
 OAuth.registerService('arcgis', 2, null, function(query){
   var response = getTokens(query);
   var refresh_token = response.refresh_token;
+  var identity = JSON.parse(getIdentity(response.access_token, response.username));
+  //console.log("ZZZZZZZZZZZZZZZZZ"+JSON.stringify(identity));
 
-  console.log("asdfsadf"+refresh_token)
+  //console.log("asdfsadf"+refresh_token)
 
   var serviceData = {
     access_token: response.access_token,
-    expires_in: (+new Date) + (1000 * response.expires_in)
+    expires_in: (+new Date) + (1000 * response.expires_in),
+    id: response.username
   };
 
   if(refresh_token){
     serviceData.refresh_token = refresh_token;
   }
 
+  var fields = _.pick(identity, Arcgis.whitelistedFields);
+  _.extend(serviceData, fields);
+
   return{
-    serviceData: serviceData
+    serviceData: serviceData,
+    options: { profile: fields }
   }
 
 });
@@ -37,7 +48,7 @@ var getTokens= function(query){
   if(!config)
     throw new ServiceConfiguration.ConfigError();
 
-    console.log(OAuth._redirectUri('arcgis', config))
+    //console.log(OAuth._redirectUri('arcgis', config))
 
     var response;
     try{
@@ -52,6 +63,7 @@ var getTokens= function(query){
     }catch(err){
       throw _.extend(new Error("Failed"),{response: err.response})
     }
+    //console.log(response);
     if (isJSON(response)){
       throw new Error("failed to complete")
     }else if(! JSON.parse(response.content).access_token){
@@ -61,7 +73,8 @@ var getTokens= function(query){
       return{
         access_token: jsoncontent.access_token,
         refresh_token: jsoncontent.refresh_token,
-        expires_in: jsoncontent.expires_in
+        expires_in: jsoncontent.expires_in,
+        username: jsoncontent.username
       };
     }
   //var response;
@@ -98,6 +111,20 @@ var getTokens= function(query){
     // });
   //}
 };
+
+var getIdentity = function(accessToken, username){
+  try{
+    return HTTP.get(
+      "https://arcgis.com/sharing/rest/community/users/"+username,
+      {params: {
+        token: accessToken,
+        f: "json"
+      }}
+    ).content;
+  }catch (err){
+    throw _.extend(new Error("Failed to get Identify" + err.message), {response: err.response});
+  }
+}
 
 Arcgis.retrieveCredential = function(credentialToken, credentialSecret){
   return OAuth.retrieveCredential(credentialToken, credentialSecret);
