@@ -1,4 +1,4 @@
-#OAuth wrapper for ArcGIS on Meteor [![Build Status](https://travis-ci.org/zxwandrew/meteor-arcgis.svg?branch=master)](https://travis-ci.org/zxwandrew/meteor-arcgis)
+#OAuth wrapper for ArcGIS on Meteor
 
 ##Installation
 
